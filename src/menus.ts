@@ -66,8 +66,16 @@ function importModelsFromJSON(directory: string) { }
 
 // Global settings menu
 export async function settingsMenu(context: ExtensionContext) {
-    const modelName = await window.showInputBox({ prompt: 'Enter model name' }) as string;
-    createSettingsMenu(context, modelName);
+    const quickPick = createNameDropdown(context);
+    quickPick.onDidChangeSelection(([{ label }]) => {
+        if (label === "←") 
+            mainMenu(context);
+        else {
+            createSettingsMenu(context, label);
+            quickPick.hide();
+        }
+    });
+    quickPick.show();
 }
 
 // Change GPT-3 settings
@@ -87,7 +95,7 @@ export async function gptSettings(context: ExtensionContext, modelName: string) 
 
     quickPick.onDidChangeSelection(async ([{ label }]) => {
         switch (label) {
-            
+
             // Engine
             case list[0]:
                 // Create dropdown menu for different UI settings

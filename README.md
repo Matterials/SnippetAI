@@ -5,8 +5,16 @@ SnippetAI is an extension to query OpenAI's GPT-3 while programming in Visual St
 
 ## Features
 
-In the dropdown menu, you should see the ability to create, export and edit modules.
-Each module contains settings and examples to send to GPT-3.
+* Ability to create modules with examples go feed to davinci
+* Customize GPT settings
+* Token limiter
+* Query history with cached responses
+* Ability to implement handler scripts
+
+# In progress
+
+* Import/export modules
+* History GUI
 
 ## Requirements
 
@@ -14,6 +22,10 @@ The only requirement for this project is axios. You can install this through npm
 ```
 npm install axios
 ```
+
+### 1.0.0
+
+Webviews finished
 
 ### 0.0.9
 

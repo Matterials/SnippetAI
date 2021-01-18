@@ -56,13 +56,14 @@ export async function gptQuery(context: ExtensionContext, prompt: string, modelN
     const edit = new WorkspaceEdit();
 
     const model = modeltools.getModelByName(context, modelName);
+
     const options = model!.options;
     const examples = model!.examples;
 
     let modifiedPrompt = '';
     for (var i = 0; i < examples.length; i++) {
         modifiedPrompt += 'Q: ' + examples[i].request + '\n';
-        modifiedPrompt += 'A: ' + examples[i].response + '\n';
+        modifiedPrompt += '\/\/Gen: \n' + examples[i].response + '\n';
     }
     modifiedPrompt += 'Q: ' + prompt + '\n';
     
@@ -85,6 +86,11 @@ export async function gptQuery(context: ExtensionContext, prompt: string, modelN
             Authorization: `Bearer ${context.globalState.get('gpt3-key')}`
         },
     })).data as any;
+
+    // Add to history
+    let history = context.globalState.get('history') as Map<string, string>;
+    history.set(prompt, result.choices[0].text);
+    context.globalState.update('history', history);
 
     // Handler stuff here
     /*

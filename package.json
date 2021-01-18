@@ -11,7 +11,8 @@
 	],
 	"activationEvents": [
 		"onCommand:snippetai.snippetAi",
-		"onCommand:snippetai.token"
+		"onCommand:snippetai.token",
+		"onWebviewPanel:editMenu"
 	],
 	"main": "./out/extension.js",
 	"contributes": {

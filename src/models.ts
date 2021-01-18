@@ -12,6 +12,7 @@ export function getModelByName(context: ExtensionContext, name: string) {
     }
 }
 
+// Returns an array of model names
 export function getModelNames(context: ExtensionContext) {
     const models = context.globalState.get('models') as Map<string, GptObject>;
     return Array.from(models.keys());

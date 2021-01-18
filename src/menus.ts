@@ -1,19 +1,19 @@
+import { createPrinter } from 'typescript';
 import { window, ExtensionContext } from 'vscode';
 import { mainMenu } from './extension';
-import { gptQuery, GptParameters } from './gpt';
+import { gptQuery, GptParameters, GptObject } from './gpt';
+import * as modeltools from './models';
 
 // Load models from globalState memory. Display them as a quick pick
 export async function loadModelMenu(context: ExtensionContext) {
-    const cachedModels = context.globalState.get('models') as Array<string>;
-    const quickPick = createDropdown(context, cachedModels);
-
+    const quickPick = createNameDropdown(context);
     quickPick.onDidChangeSelection(async ([{ label }]) => {
         if (label === "←") {
             mainMenu(context);
         }
         else {
             const prompt = await window.showInputBox() as string;
-            gptQuery(context, prompt);
+            gptQuery(context, prompt, label);
         }
         quickPick.hide();
     });
@@ -34,15 +34,15 @@ export async function createModelMenu(context: ExtensionContext) {
 
 // Delete models from globalState memory
 export async function deleteModelMenu(context: ExtensionContext) {
-    let cachedModels = context.globalState.get('models') as Array<string>;
-    const quickPick = createDropdown(context, cachedModels);
-
+    // Quick pick
+    let cachedModels = context.globalState.get('models') as Map<string, GptObject>;
+    const quickPick = createNameDropdown(context);
     quickPick.onDidChangeSelection(([{ label }]) => {
         if (label === "←") {
             mainMenu(context);
         }
         else {
-            cachedModels = cachedModels.filter(obj => obj !== label);
+            cachedModels.delete(label);
             context.globalState.update('models', cachedModels);
             quickPick.hide();
             mainMenu(context);
@@ -60,16 +60,18 @@ export async function exportModelsMenu(context: ExtensionContext) {
 // Export models to JSON
 function exportModelsToJson(directory: string) { }
 
+// Import models from JSON
+function importModelsFromJSON(directory: string) { }
+
 // Change GPT-3 settings
-export async function gptSettings(context: ExtensionContext) {
-    let settings = context.globalState.get('gpt-settings') as Partial<GptParameters>;
+export async function gptSettings(context: ExtensionContext, modelName: string) {
+    let settings = modeltools.getModelByName(context, modelName)?.options as GptParameters;
     let list = Array<string>();
 
     // Settings
     list.push(`Engine: ${settings.engine}`);
     list.push(`Temperature: ${settings.temperature}`);
     list.push(`Tokens: ${settings.tokens}`);
-    list.push(`Add/edit API key`);
     list.push("←");
 
     const options = list.map(label => ({ label }));
@@ -78,6 +80,8 @@ export async function gptSettings(context: ExtensionContext) {
 
     quickPick.onDidChangeSelection(async ([{ label }]) => {
         switch (label) {
+            
+            // Engine
             case list[0]:
                 // Create dropdown menu for different UI settings
                 const engineOptions = ['ada', 'babbage', 'curie', 'davinci', '←'].map(label => ({ label }));
@@ -93,13 +97,13 @@ export async function gptSettings(context: ExtensionContext) {
                         settings.engine = label;
                         context.globalState.update('gpt-settings', settings);
                         engineQuickPick.hide();
-                        gptSettings(context);
                     }
                 });
 
                 engineQuickPick.show();
                 break;
 
+            // Temperature
             case list[1]:
                 const temperature = await window.showInputBox({ prompt: 'Enter a new temperature' }) as string;
                 const temp = Number(temperature);
@@ -118,10 +122,9 @@ export async function gptSettings(context: ExtensionContext) {
                         context.globalState.update('gpt-settings', settings);
                     }
                 }
-
-                gptSettings(context);
                 break;
 
+            // Tokens
             case list[2]:
                 const tokens = await window.showInputBox({ prompt: 'Enter a new token limit' }) as string;
                 const numTokens = Number(tokens);
@@ -140,18 +143,10 @@ export async function gptSettings(context: ExtensionContext) {
                         context.globalState.update('gpt-settings', settings);
                     }
                 }
-
-                gptSettings(context);
                 break;
 
+            // Back
             case list[3]:
-                const key = await window.showInputBox({ prompt: 'Enter your API key', placeHolder: settings.key }) as string;
-                settings.key = key;
-                context.globalState.update('gpt-settings', settings);
-                mainMenu(context);
-                break;
-
-            case list[4]:
                 quickPick.hide();
                 mainMenu(context);
                 break;
@@ -162,7 +157,8 @@ export async function gptSettings(context: ExtensionContext) {
 }
 
 // Creates dropdown with cached models and back option
-function createDropdown(context: ExtensionContext, cachedModels: Array<string>) {
+function createNameDropdown(context: ExtensionContext) {
+    const cachedModels = modeltools.getModelNames(context);
     const options = [...cachedModels.map(label => ({ label })), { label: '←' }];
     const quickPick = window.createQuickPick();
     quickPick.items = options;
@@ -171,7 +167,7 @@ function createDropdown(context: ExtensionContext, cachedModels: Array<string>) 
 
 // Cache models in globalState memory
 function saveModel(context: ExtensionContext, name: string) {
-    let cachedModels = context.globalState.get('models') as Array<string>;
-    cachedModels.push(name);
+    let cachedModels = context.globalState.get('models') as Map<string, GptObject>;
+    cachedModels.set(name, new GptObject());
     context.globalState.update('models', cachedModels);
 }

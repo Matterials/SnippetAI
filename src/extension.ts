@@ -1,12 +1,14 @@
 import { window, commands, ExtensionContext, StatusBarItem, StatusBarAlignment } from 'vscode';
-import { GptObject } from './gpt';
 import { loadModelMenu, createModelMenu, deleteModelMenu, exportModelsMenu } from './menus';
+import { settingsMenu } from './webviews';
+import { GptObject } from './gpt';
 
 let tokenStatusBarItem: StatusBarItem;
 
 // Entry point
 export function activate(context: ExtensionContext) {
 	const tokenID = 'snippetai.token';
+	context.globalState.update('models', new Map<string, GptObject>());
 
 	// Register main command and token status command
 	let main = commands.registerCommand('snippetai.snippetAi', async () => { mainMenu(context); });
@@ -16,13 +18,15 @@ export function activate(context: ExtensionContext) {
 	tokenStatusBarItem.command = tokenID;
 	context.subscriptions.push(tokenStatusBarItem);
 
+	// TODO: Add on startup
+	
 	const currentlyUsed = context.globalState.get('tokens-used');
 	const limit = context.globalState.get('token-limit');
 	tokenStatusBarItem.text = `$(output) ${currentlyUsed}/${limit} tokens used.`;
 	tokenStatusBarItem.show();
 }
 
-// Main menu
+// Main menu that contains the primary options of the extension
 export function mainMenu(context: ExtensionContext) {
 	const options = ['Load Model', 'Create Model', 'Edit Model', 'Delete Model', 'Export Models', 'Add/edit API key'].map(label => ({ label }));
 	const quickPick = window.createQuickPick();
@@ -37,6 +41,7 @@ export function mainMenu(context: ExtensionContext) {
 				break;
 			// TODO: Implement editing GUI & creating GUI
 			case options[2].label:
+				settingsMenu(context);
 				break;
 			case options[3].label:
 				deleteModelMenu(context);
@@ -56,7 +61,11 @@ export function mainMenu(context: ExtensionContext) {
 	quickPick.show();
 }
 
+// Don't want to limit the developer to a timeframe
+// If they want to reset or change they can do that
+// This is moreso a mental reminder for them
 export function tokenMenu(context: ExtensionContext) {
+	// Using create quickpick over show quickpick because it's less of a pain and generally the same speed
 	const options = ['Set Max Tokens', 'Reset Token Use'].map(label => ({ label }));
 	const quickPick = window.createQuickPick();
 	quickPick.items = options;

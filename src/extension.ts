@@ -39,9 +39,8 @@ export function mainMenu(context: ExtensionContext) {
 			case options[1].label:
 				createModelMenu(context);
 				break;
-			// TODO: Implement editing GUI & creating GUI
 			case options[2].label:
-				settingsMenu();
+				settingsMenu(context, 'Test Object');
 				break;
 			case options[3].label:
 				deleteModelMenu(context);

@@ -1,5 +1,6 @@
-import { Settings } from 'http2';
-import { window, ViewColumn, ExtensionContext, WebviewView, WebviewPanel } from 'vscode';
+import { window, ViewColumn, WebviewPanel, ExtensionContext } from 'vscode';
+import * as modeltools from './models';
+import { GptExample } from './gpt';
 
 export class SettingsView {
   exampleCount: number;
@@ -26,6 +27,10 @@ export class SettingsView {
             <textarea class="form-control" id="response-${this.examples.length}" rows="3" placeholder="Response..."></textarea>
         </div>
       </div>`);
+  }
+
+  public writeExamplesFromList(list: []) {
+    
   }
 
   writeHeader() {
@@ -61,26 +66,28 @@ export class SettingsView {
         <form>`;
   }
 
+  // push all the values in addExample too
   writeScripts() {
     return `
       </form>
       <button type="button" class="btn btn-light" onclick="addExample()">Add Example</button>
       <button type="button" class="btn btn-success" onclick="save()">Save Settings</button>
       <script>
+          const vscode = acquireVsCodeApi();
           function addExample() {
-            const vscode = acquireVsCodeApi();
             vscode.postMessage({
               command: 'addExample'
             })
           }
           function save() {
-              const vscode = acquireVsCodeApi();
               examples = []
               for (var i = 0; i < ${this.examples.length}; i++) {
-                const request = document.getElementById('request-' + i);
-                const response = document.getElementById('response-' + i);
-                examples.push(request);
-                examples.push(response);
+                tuple = []
+                const request = document.getElementById('request-' + i).value;
+                const response = document.getElementById('response-' + i).value;
+                tuple.push(request);
+                tuple.push(response);
+                examples.push(tuple);
               }
               vscode.postMessage({
                 command: 'examples',
@@ -108,7 +115,7 @@ export class SettingsView {
 }
 
 let panel: WebviewPanel;
-export async function settingsMenu() {
+export async function settingsMenu(context: ExtensionContext, modelName: string) {
   panel = window.createWebviewPanel(
     'editMenu',
     'Edit Menu - SnippetAI',
@@ -117,20 +124,24 @@ export async function settingsMenu() {
   }
   );
 
-  let view = new SettingsView('Test Object');
+  let view = new SettingsView(modelName);
   panel.webview.html = view.toHTML();
-  panel.webview.onDidReceiveMessage(message => {
-    console.log(message);
-    switch(message.command) {
-      case 'addExample':
-        view.addExample();
-        panel.webview.html = view.toHTML();
-        break;
-      case 'examples':
-        console.log(message.items);
-        break;
-    }
-  });
+  panel.webview.onDidReceiveMessage(
+    message => {
+      console.log(message);
+      switch(message.command) {
+        case 'addExample':
+          view.addExample();
+          panel.webview.html = view.toHTML();
+          return;
+        case 'examples':
+          const examples: GptExample[] = message.items;
+          //modeltools.getModelByName(modelName);
+          return;
+      }
+  },
+  undefined,
+  context.subscriptions);
 }
 
 export function createSettingsWebview(modelName: string) {

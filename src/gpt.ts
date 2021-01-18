@@ -42,12 +42,14 @@ export class GptExample {
 
 // Object for global state storage
 export class GptObject {
-    options: GptParameters;
-    script: string;
+    public options: GptParameters;
+    public examples: GptExample[];
+    public script: string;
 
     constructor(options = new GptParameters(), script = 'None') {
         this.options = options;
-        this.script = 'None';
+        this.script = script;
+        this.examples = [];
     }
 }
 

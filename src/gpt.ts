@@ -12,27 +12,25 @@ export class GptParameters {
     public topP: number;
     public n: number;
     public stream: boolean;
-    public logprobs: number;
     public stop: string;
 
     constructor(engine='davinci', temperature=0.8,
-                tokens=128, topP = 1, n = 1, stream=false,
-                logprobs = 0, stop = '\n') {
+                tokens=60, topP = 1, n = 1, stream=false,
+                stop = 'Q: ') {
         this.engine = engine;
         this.temperature = temperature;
         this.tokens = tokens;
         this.topP = topP;
         this.n = n;
         this.stream = stream;
-        this.logprobs = logprobs;
         this.stop = stop;
     }
 }
 
 // To feed into davinci
 export class GptExample {
-    request: string;
-    response: string;
+    public request: string;
+    public response: string;
 
     constructor(request='', response='') {
         this.request = request;
@@ -55,20 +53,30 @@ export class GptObject {
 
 // Query GPT-3 with text that we grabbed from load model
 export async function gptQuery(context: ExtensionContext, prompt: string, modelName: string) {
-    const stored = modeltools.getModelByName(context, modelName)!.options;
     const edit = new WorkspaceEdit();
+
+    const model = modeltools.getModelByName(context, modelName);
+    const options = model!.options;
+    const examples = model!.examples;
+
+    let modifiedPrompt = '';
+    for (var i = 0; i < examples.length; i++) {
+        modifiedPrompt += 'Q: ' + examples[i].request + '\n';
+        modifiedPrompt += 'A: ' + examples[i].response + '\n';
+    }
+    modifiedPrompt += 'Q: ' + prompt + '\n';
     
-    const result = (await axios.post(`https://api.openai.com/v1/engines/${stored.engine}/completions`, {
-        prompt: prompt,
+    const result = (await axios.post(`https://api.openai.com/v1/engines/${options.engine}/completions`, {
+        prompt: modifiedPrompt,
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        max_tokens: stored.tokens,
-        temperature: stored.temperature,
+        max_tokens: options.tokens,
+        temperature: options.temperature,
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        top_p: stored.topP,
-        n: stored.n,
-        stream: stored.stream,
-        logprobs: stored.logprobs,
-        stop: stored.stop,
+        top_p: options.topP,
+        n: options.n,
+        stream: options.stream,
+        logprobs: null,
+        stop: options.stop,
     }, {
         headers: {
             // eslint-disable-next-line @typescript-eslint/naming-convention

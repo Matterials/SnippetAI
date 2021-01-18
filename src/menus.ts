@@ -1,7 +1,8 @@
-import { createPrinter } from 'typescript';
-import { window, ExtensionContext } from 'vscode';
-import { mainMenu } from './extension';
 import { gptQuery, GptParameters, GptObject } from './gpt';
+import { window, ExtensionContext } from 'vscode';
+import { createSettingsMenu } from './webviews';
+import { createPrinter } from 'typescript';
+import { mainMenu } from './extension';
 import * as modeltools from './models';
 
 // Load models from globalState memory. Display them as a quick pick
@@ -62,6 +63,12 @@ function exportModelsToJson(directory: string) { }
 
 // Import models from JSON
 function importModelsFromJSON(directory: string) { }
+
+// Global settings menu
+export async function settingsMenu(context: ExtensionContext) {
+    const modelName = await window.showInputBox({ prompt: 'Enter model name' }) as string;
+    createSettingsMenu(context, modelName);
+}
 
 // Change GPT-3 settings
 export async function gptSettings(context: ExtensionContext, modelName: string) {

@@ -1,6 +1,5 @@
+import { loadModelMenu, createModelMenu, settingsMenu, deleteModelMenu, exportModelsMenu } from './menus';
 import { window, commands, ExtensionContext, StatusBarItem, StatusBarAlignment } from 'vscode';
-import { loadModelMenu, createModelMenu, deleteModelMenu, exportModelsMenu } from './menus';
-import { settingsMenu } from './webviews';
 import { GptObject } from './gpt';
 
 let tokenStatusBarItem: StatusBarItem;
@@ -40,7 +39,7 @@ export function mainMenu(context: ExtensionContext) {
 				createModelMenu(context);
 				break;
 			case options[2].label:
-				settingsMenu(context, 'Test Object');
+				settingsMenu(context);
 				break;
 			case options[3].label:
 				deleteModelMenu(context);

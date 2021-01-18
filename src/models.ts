@@ -17,3 +17,14 @@ export function getModelNames(context: ExtensionContext) {
     const models = context.globalState.get('models') as Map<string, GptObject>;
     return Array.from(models.keys());
 }
+
+// Updates value in models
+export function updateModelByName(context: ExtensionContext, name: string, data: GptObject) {
+    let models = context.globalState.get('models') as Map<string, GptObject>;
+    if (models.has(name)) {
+        models.set(name, data);
+    }
+    else {
+        window.showErrorMessage(`Could not find model ${name}`);
+    }
+}

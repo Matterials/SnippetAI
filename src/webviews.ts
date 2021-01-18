@@ -1,37 +1,36 @@
+import { Settings } from 'http2';
 import { window, ViewColumn, ExtensionContext, WebviewView, WebviewPanel } from 'vscode';
 
-let panel: WebviewPanel;
-export async function settingsMenu(context: ExtensionContext) {
-    panel = window.createWebviewPanel(
-        'editMenu',
-        'Edit Menu - SnippetAI',
-        ViewColumn.One,
-        {
-          enableScripts: true
-        }
-    );
-    panel.webview.html = createSettingsWebview('heck yeah', '');
-}
+export class SettingsView {
+  exampleCount: number;
+  examples: string[];
+  name: string;
 
-export function addExample() {
-    const newForm = `
-    <div class="example" id="1">
-      <div class="form-group">
-          <label for="name">Example one</label>
-          <input type="text" class="form-control" id="request" placeholder="Request...">
-      </div>
-      <div class="form-group">
-          <label for="exampleFormControlTextarea1">Response one</label>
-          <textarea class="form-control" id="response" rows="3" placeholder="Response..."></textarea>
-      </div>
-  </div>`;
-  const newHTML = createSettingsWebview('heck yeah', newForm);
-  panel.webview.html = newHTML;
-}
+  constructor(name: string) {
+    this.exampleCount = 0;
+    this.examples = [];
+    this.name = name;
+  }
 
-// add a button, post the message, increase,
-export function createSettingsWebview(modelName: string, additionalForm: string) {
-    return `<!doctype html>
+  public addExample() {
+    this.exampleCount++;
+    this.examples.push
+      (`
+      <div class="example">
+        <div class="form-group">
+            <label for="requestLabel">Example</label>
+            <input type="text" class="form-control" id="request-${this.examples.length}" placeholder="Request...">
+        </div>
+        <div class="form-group">
+            <label for="responseLabel">Response</label>
+            <textarea class="form-control" id="response-${this.examples.length}" rows="3" placeholder="Response..."></textarea>
+        </div>
+      </div>`);
+  }
+
+  writeHeader() {
+    return `
+    <!doctype html>
     <html lang="en">
       <head>
         <!-- Required meta tags -->
@@ -53,29 +52,87 @@ export function createSettingsWebview(modelName: string, additionalForm: string)
         h2 { color: white; }
       </style>
       <body>
-        <h2>Global Settings - ${modelName}</h2>
+        <h2>Global Settings - ${this.name}</h2>
         <!-- Load Bootstrap -->
     
         <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
         <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+        <form>`;
+  }
 
-        <form>
-          <div class="example" id="1">
-            <div class="form-group">
-                <label for="name">Example one</label>
-                <input type="text" class="form-control" id="request" placeholder="Request...">
-            </div>
-            <div class="form-group">
-                <label for="exampleFormControlTextarea1">Response one</label>
-                <textarea class="form-control" id="response" rows="3" placeholder="Response..."></textarea>
-            </div>
-          </div>
-          ${additionalForm}
-        </form>
+  writeScripts() {
+    return `
+      </form>
+      <button type="button" class="btn btn-light" onclick="addExample()">Add Example</button>
+      <button type="button" class="btn btn-success" onclick="save()">Save Settings</button>
       <script>
-      
+          function addExample() {
+            const vscode = acquireVsCodeApi();
+            vscode.postMessage({
+              command: 'addExample'
+            })
+          }
+          function save() {
+              const vscode = acquireVsCodeApi();
+              examples = []
+              for (var i = 0; i < ${this.examples.length}; i++) {
+                const request = document.getElementById('request-' + i);
+                const response = document.getElementById('response-' + i);
+                examples.push(request);
+                examples.push(response);
+              }
+              vscode.postMessage({
+                command: 'examples',
+                items: examples              
+              })
+          }
       </script>
-      </body>
+    </body>
     </html>`;
+  }
+
+  writeExamples() {
+    let html = '';
+    for (var i = 0; i < this.examples.length; i++) {
+      html += this.examples[i];
+    }
+    return html;
+  }
+
+  // Compiles all examples into HTML code
+  public toHTML() {
+    // Add header
+    return this.writeHeader() + this.writeExamples() + this.writeScripts();
+  }
+}
+
+let panel: WebviewPanel;
+export async function settingsMenu() {
+  panel = window.createWebviewPanel(
+    'editMenu',
+    'Edit Menu - SnippetAI',
+    ViewColumn.One, {
+    enableScripts: true
+  }
+  );
+
+  let view = new SettingsView('Test Object');
+  panel.webview.html = view.toHTML();
+  panel.webview.onDidReceiveMessage(message => {
+    console.log(message);
+    switch(message.command) {
+      case 'addExample':
+        view.addExample();
+        panel.webview.html = view.toHTML();
+        break;
+      case 'examples':
+        console.log(message.items);
+        break;
+    }
+  });
+}
+
+export function createSettingsWebview(modelName: string) {
+  return new SettingsView(modelName).toHTML();
 }

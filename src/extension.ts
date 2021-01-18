@@ -1,6 +1,6 @@
 import { window, commands, ExtensionContext, StatusBarItem, StatusBarAlignment } from 'vscode';
 import { loadModelMenu, createModelMenu, deleteModelMenu, exportModelsMenu } from './menus';
-import { settingsMenu, addExample } from './webviews';
+import { settingsMenu } from './webviews';
 import { GptObject } from './gpt';
 
 let tokenStatusBarItem: StatusBarItem;
@@ -28,7 +28,7 @@ export function activate(context: ExtensionContext) {
 
 // Main menu that contains the primary options of the extension
 export function mainMenu(context: ExtensionContext) {
-	const options = ['Load Model', 'Create Model', 'Edit Model', 'Delete Model', 'Export Models', 'Add/edit API key', 'add example'].map(label => ({ label }));
+	const options = ['Load Model', 'Create Model', 'Edit Model', 'Delete Model', 'Export Models', 'Add/edit API key'].map(label => ({ label }));
 	const quickPick = window.createQuickPick();
 	quickPick.items = options;
 	quickPick.onDidChangeSelection(async ([{ label }]) => {
@@ -41,7 +41,7 @@ export function mainMenu(context: ExtensionContext) {
 				break;
 			// TODO: Implement editing GUI & creating GUI
 			case options[2].label:
-				settingsMenu(context);
+				settingsMenu();
 				break;
 			case options[3].label:
 				deleteModelMenu(context);
@@ -54,9 +54,6 @@ export function mainMenu(context: ExtensionContext) {
 				const key = await window.showInputBox({ prompt: 'Enter your API key', placeHolder: currentKey }) as string;
                 context.globalState.update('gpt3-key', key);
                 mainMenu(context);
-				break;
-			case options[6].label:
-				addExample();
 				break;
 		}
 		quickPick.hide();

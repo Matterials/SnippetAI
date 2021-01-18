@@ -29,6 +29,17 @@ export class GptParameters {
     }
 }
 
+// To feed into davinci
+export class GptExample {
+    request: string;
+    response: string;
+
+    constructor(request='', response='') {
+        this.request = request;
+        this.response = response;
+    }
+}
+
 // Object for global state storage
 export class GptObject {
     options: GptParameters;

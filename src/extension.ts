@@ -1,33 +1,33 @@
-import { window, commands, ExtensionContext } from 'vscode';
-import { loadModelMenu, createModelMenu, deleteModelMenu, exportModelsMenu, gptSettings } from './menus';
-import { GptParameters } from './gpt';
+import { window, commands, ExtensionContext, StatusBarItem, StatusBarAlignment } from 'vscode';
+import { GptObject } from './gpt';
+import { loadModelMenu, createModelMenu, deleteModelMenu, exportModelsMenu } from './menus';
+
+let tokenStatusBarItem: StatusBarItem;
 
 // Entry point
 export function activate(context: ExtensionContext) {
-	let settings = context.globalState.get('gpt-settings') as Partial<GptParameters>;
+	const tokenID = 'snippetai.token';
 
-	// Default davinci settings
-	if (settings === undefined) {
-		context.globalState.update('gpt-settings', {
-			engine: "davinci",
-			temperature: 1,
-			tokens: 128,
-			stop: '\n'
-		});
-	}
+	// Register main command and token status command
+	let main = commands.registerCommand('snippetai.snippetAi', async () => { mainMenu(context); });
+	let token = commands.registerCommand(tokenID, async() => { tokenMenu(context); });
 
-	// Register command
-	let disposable = commands.registerCommand('snippetai.snippetAi', async () => {
-		mainMenu(context);
-	});
+	tokenStatusBarItem = window.createStatusBarItem(StatusBarAlignment.Right, 100);
+	tokenStatusBarItem.command = tokenID;
+	context.subscriptions.push(tokenStatusBarItem);
+
+	const currentlyUsed = context.globalState.get('tokens-used');
+	const limit = context.globalState.get('token-limit');
+	tokenStatusBarItem.text = `$(output) ${currentlyUsed}/${limit} tokens used.`;
+	tokenStatusBarItem.show();
 }
 
 // Main menu
 export function mainMenu(context: ExtensionContext) {
-	const options = ['Load Model', 'Create Model', 'Edit Model', 'Delete Model', 'Export Models', 'Edit GPT-3 Settings'].map(label => ({ label }));
+	const options = ['Load Model', 'Create Model', 'Edit Model', 'Delete Model', 'Export Models', 'Add/edit API key'].map(label => ({ label }));
 	const quickPick = window.createQuickPick();
 	quickPick.items = options;
-	quickPick.onDidChangeSelection(([{ label }]) => {
+	quickPick.onDidChangeSelection(async ([{ label }]) => {
 		switch (label) {
 			case options[0].label:
 				loadModelMenu(context);
@@ -45,7 +45,34 @@ export function mainMenu(context: ExtensionContext) {
 				exportModelsMenu(context);
 				break;
 			case options[5].label:
-				gptSettings(context);
+				const currentKey = context.globalState.get('gpt3-key') as string;
+				const key = await window.showInputBox({ prompt: 'Enter your API key', placeHolder: currentKey }) as string;
+                context.globalState.update('gpt3-key', key);
+                mainMenu(context);
+                break;
+		}
+		quickPick.hide();
+	});
+	quickPick.show();
+}
+
+export function tokenMenu(context: ExtensionContext) {
+	const options = ['Set Max Tokens', 'Reset Token Use'].map(label => ({ label }));
+	const quickPick = window.createQuickPick();
+	quickPick.items = options;
+	quickPick.onDidChangeSelection(async ([{ label }]) => {
+		switch (label) {
+			case options[0].label:
+				let amount: number = Number(await window.showInputBox() as string);
+				const currentlyUsed: number = context.globalState.get('tokens-used') as number;
+
+				context.globalState.update('token-limit', amount);
+				tokenStatusBarItem.text = `$(output) ${currentlyUsed}/${amount} tokens used.`;
+				break;
+			case options[1].label:
+				const limit = context.globalState.get('token-limit');
+				context.globalState.update('tokens-used', 0);
+				tokenStatusBarItem.text = `$(output) 0/${limit} tokens used.`;
 				break;
 		}
 		quickPick.hide();

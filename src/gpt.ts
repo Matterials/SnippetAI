@@ -1,21 +1,22 @@
 import { window, workspace, ExtensionContext, WorkspaceEdit, Position, Uri } from 'vscode';
 import { createPrinter, getJSDocTypeParameterTags } from 'typescript';
 import { loadResponseFromString } from './responseHandler';
+import { tokenStatusBarItem } from './extension';
 import * as modeltools from './models';
 import axios from 'axios';
 
 // Stored params to query with
 export class GptParameters {
-    public engine: string;
-    public temperature: number;
-    public tokens: number;
-    public topP: number;
-    public n: number;
-    public stream: boolean;
-    public stop: string;
+    engine: string;
+    temperature: number;
+    tokens: number;
+    topP: number;
+    n: number;
+    stream: boolean;
+    stop: string;
 
     constructor(engine='davinci', temperature=0.8,
-                tokens=60, topP = 1, n = 1, stream=false,
+                tokens=128, topP = 1, n = 1, stream=false,
                 stop = 'Q: ') {
         this.engine = engine;
         this.temperature = temperature;
@@ -29,8 +30,8 @@ export class GptParameters {
 
 // To feed into davinci
 export class GptExample {
-    public request: string;
-    public response: string;
+    request: string;
+    response: string;
 
     constructor(request='', response='') {
         this.request = request;
@@ -40,9 +41,9 @@ export class GptExample {
 
 // Object for global state storage
 export class GptObject {
-    public options: GptParameters;
-    public examples: GptExample[];
-    public script: string;
+    options: GptParameters;
+    examples: GptExample[];
+    script: string;
 
     constructor(options = new GptParameters(), script = 'None') {
         this.options = options;
@@ -57,15 +58,23 @@ export async function gptQuery(context: ExtensionContext, prompt: string, modelN
 
     const model = modeltools.getModelByName(context, modelName);
 
+    // GPT Object
     const options = model!.options;
     const examples = model!.examples;
 
+    // Token status bar item
+    const limit = Number(context.globalState.get('token-limit'));
+    let currentlyUsed = Number(context.globalState.get('tokens-used'));
+
+    // Prompt
     let modifiedPrompt = '';
-    for (var i = 0; i < examples.length; i++) {
-        modifiedPrompt += 'Q: ' + examples[i].request + '\n';
-        modifiedPrompt += '\/\/Gen: \n' + examples[i].response + '\n';
+    
+    // Check to see if in bounds of the token limit
+    currentlyUsed += Math.round(modifiedPrompt.length / 4);
+    if (currentlyUsed > limit) {
+        window.showErrorMessage('Over the token limit');
+        return;
     }
-    modifiedPrompt += 'Q: ' + prompt + '\n';
     
     const result = (await axios.post(`https://api.openai.com/v1/engines/${options.engine}/completions`, {
         prompt: modifiedPrompt,
@@ -87,11 +96,6 @@ export async function gptQuery(context: ExtensionContext, prompt: string, modelN
         },
     })).data as any;
 
-    // Add to history
-    let history = context.globalState.get('history') as Map<string, string>;
-    history.set(prompt, result.choices[0].text);
-    context.globalState.update('history', history);
-
     // Handler stuff here
     /*
         const parsed = loadResponseFromString(stored.script(), result.choices[0].text);
@@ -103,4 +107,7 @@ export async function gptQuery(context: ExtensionContext, prompt: string, modelN
         window.activeTextEditor?.selection.active as Position, result.choices[0].text);
 
     workspace.applyEdit(edit);
+
+    
+	tokenStatusBarItem.text = `$(output) ${currentlyUsed}/${limit} tokens used.`;
 }

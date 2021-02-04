@@ -2,12 +2,11 @@ import { loadModelMenu, createModelMenu, settingsMenu, deleteModelMenu, exportMo
 import { window, commands, ExtensionContext, StatusBarItem, StatusBarAlignment } from 'vscode';
 import { GptObject } from './gpt';
 
-let tokenStatusBarItem: StatusBarItem;
+export let tokenStatusBarItem: StatusBarItem;
 
 // Entry point
 export function activate(context: ExtensionContext) {
 	const tokenID = 'snippetai.token';
-	context.globalState.update('models', new Map<string, GptObject>());
 
 	// Register main command and token status command
 	let main = commands.registerCommand('snippetai.snippetAi', async () => { mainMenu(context); });

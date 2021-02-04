@@ -16,8 +16,7 @@ export class SettingsView {
   public addExample() {
     this.exampleCount++;
     this.examples.push
-      (`
-      <div class="example">
+      (`<div class="example">
         <div class="form-group">
             <label for="requestLabel">Example</label>
             <input type="text" class="form-control" id="request-${this.examples.length}" placeholder="Request...">
@@ -77,7 +76,7 @@ export class SettingsView {
     return `
       </form>
       <button type="button" class="btn btn-light" onclick="addExample()">Add Example</button>
-      <button type="button" class="btn btn-success" onclick="save()">Save Settings</button>
+      <button type="button" class="btn btn-light" onclick="save()">Save Settings</button>
       <script>
           const vscode = acquireVsCodeApi();
           function addExample() {
@@ -111,6 +110,10 @@ export class SettingsView {
       html += this.examples[i];
     }
     return html;
+  }
+
+  writeGptSettings() {
+
   }
 
   // Compiles all examples into HTML code
@@ -156,6 +159,7 @@ export async function createSettingsMenu(context: ExtensionContext, modelName: s
 
           model!.examples = pulled;
           modeltools.updateModelByName(context, modelName, model!);
+          window.showInformationMessage('Settings saved');
           return;
       }
     },
